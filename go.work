@@ -1,0 +1,10 @@
+go 1.23.2
+
+use (
+	./bm
+	./commitment
+	./ddc
+	./em
+	./mfeed
+	./rdr
+)

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+tmux \
+  display-popup -E -w40 -h12 \
+  em

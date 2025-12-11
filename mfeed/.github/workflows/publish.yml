@@ -1,0 +1,50 @@
+name: Generate Atom Feed and Publish to GitHub Pages
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'  # Runs at 06:00 AM every Monday
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+
+    - name: Run Go script
+      run: |
+        mkdir build
+        go build
+        ./mfeed > ./build/feed
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+    - name: Upload artifact
+      id: upload-artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: build
+
+  deploy:
+    needs: build
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
