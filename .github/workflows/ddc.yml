@@ -1,0 +1,34 @@
+name: ddc CI
+
+on:
+  push:
+    paths:
+      - "ddc/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/ddc.yml"
+  pull_request:
+    paths:
+      - "ddc/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/ddc.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ddc
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ddc/go.mod
+      - name: Download dependencies
+        run: go mod download
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./...

@@ -1,0 +1,34 @@
+name: rdr CI
+
+on:
+  push:
+    paths:
+      - "rdr/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/rdr.yml"
+  pull_request:
+    paths:
+      - "rdr/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/rdr.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rdr
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: rdr/go.mod
+      - name: Download dependencies
+        run: go mod download
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./...

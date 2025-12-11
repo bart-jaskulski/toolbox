@@ -1,0 +1,34 @@
+name: mfeed CI
+
+on:
+  push:
+    paths:
+      - "mfeed/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/mfeed.yml"
+  pull_request:
+    paths:
+      - "mfeed/**"
+      - "go.work"
+      - "go.work.sum"
+      - ".github/workflows/mfeed.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mfeed
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: mfeed/go.mod
+      - name: Download dependencies
+        run: go mod download
+      - name: Test
+        run: go test ./...
+      - name: Build
+        run: go build ./...
