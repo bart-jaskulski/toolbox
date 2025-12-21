@@ -29,13 +29,6 @@ func printProcessingInfo(cfg *Config) {
 // (No changes needed here)
 func printCompletionInfo(cfg *Config, fileCount int) {
 	fmt.Println("-------------------------------------------------")
-	fmt.Printf("File processing complete. Added %d files to %s.\n", fileCount, formatDisplayName(cfg.OutputFormat))
-	if cfg.Metadata != nil {
-		fmt.Println("Project metadata was included.") // Add a note if metadata was added
-	}
-	fmt.Printf("Output saved to %s\n", cfg.OutputFile)
-	if !cfg.IncludeBinary {
-		fmt.Println("(Likely binary files were skipped unless --include-binary was used)")
-	}
+	fmt.Printf("Wrote %d files to %s (%s)\n", fileCount, cfg.OutputFile, formatDisplayName(cfg.OutputFormat))
 	fmt.Println("-------------------------------------------------")
 }

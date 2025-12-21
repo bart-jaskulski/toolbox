@@ -1,126 +1,99 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
-	"sort"
+	"io"
 	"strings"
 )
 
-func generateMarkdown(cfg *Config, filesToInclude map[string]string) (int, error) {
-	log.Println("Generating Markdown output...")
-	processedFilesCount := 0
+type markdownFormatter struct{}
 
-	projectName := filepath.Base(cfg.ProjectRoot)
+func (markdownFormatter) Name() string {
+	return outputFormatMarkdown
+}
 
-	relPaths := make([]string, 0, len(filesToInclude))
-	for relPath := range filesToInclude {
-		relPaths = append(relPaths, relPath)
-	}
-	sort.Strings(relPaths)
-
-	outFile, err := os.Create(cfg.OutputFile)
-	if err != nil {
-		return 0, fmt.Errorf("failed to create output file '%s': %w", cfg.OutputFile, err)
-	}
-	defer outFile.Close()
-
-	writer := bufio.NewWriter(outFile)
-
-	_, err = writer.WriteString("# Project: " + projectName + "\n\n")
-	if err != nil {
-		return 0, fmt.Errorf("failed to write markdown header: %w", err)
+func (markdownFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
+	if _, err := io.WriteString(w, "# Project: "+snapshot.Name+"\n\n"); err != nil {
+		return fmt.Errorf("failed to write markdown header: %w", err)
 	}
 
-	if len(cfg.ExtractedPackages) > 0 {
-		_, err = writer.WriteString("## Packages\n")
-		if err != nil {
-			return 0, fmt.Errorf("failed to write packages header: %w", err)
+	if len(snapshot.Packages) > 0 {
+		if _, err := io.WriteString(w, "## Packages\n"); err != nil {
+			return fmt.Errorf("failed to write packages header: %w", err)
 		}
-		_, err = writer.WriteString("| type | scope | name | version |\n| --- | --- | --- | --- |\n")
-		if err != nil {
-			return 0, fmt.Errorf("failed to write packages table header: %w", err)
+		if _, err := io.WriteString(w, "| type | scope | name | version |\n| --- | --- | --- | --- |\n"); err != nil {
+			return fmt.Errorf("failed to write packages table header: %w", err)
 		}
-		for _, pkg := range cfg.ExtractedPackages {
+		for _, pkg := range snapshot.Packages {
 			scope := pkg.Scope
 			if scope == "" {
 				scope = "-"
 			}
-			_, err = fmt.Fprintf(
-				writer,
+			if _, err := fmt.Fprintf(
+				w,
 				"| %s | %s | %s | %s |\n",
 				escapeMarkdownTable(pkg.Type),
 				escapeMarkdownTable(scope),
 				escapeMarkdownTable(pkg.Name),
 				escapeMarkdownTable(pkg.Version),
-			)
-			if err != nil {
-				return 0, fmt.Errorf("failed to write packages table: %w", err)
+			); err != nil {
+				return fmt.Errorf("failed to write packages table: %w", err)
 			}
 		}
-		_, err = writer.WriteString("\n")
-		if err != nil {
-			return 0, fmt.Errorf("failed to write packages separator: %w", err)
+		if _, err := io.WriteString(w, "\n"); err != nil {
+			return fmt.Errorf("failed to write packages separator: %w", err)
 		}
 	}
 
-	_, err = writer.WriteString("## Files\n\n")
-	if err != nil {
-		return 0, fmt.Errorf("failed to write files header: %w", err)
+	if snapshot.Tree != nil && len(snapshot.Tree.Children) > 0 {
+		if _, err := io.WriteString(w, "## Tree\n"); err != nil {
+			return fmt.Errorf("failed to write tree header: %w", err)
+		}
+		if _, err := io.WriteString(w, "```\n"); err != nil {
+			return fmt.Errorf("failed to open tree block: %w", err)
+		}
+		if err := writeMarkdownTree(w, snapshot.Tree.Children, "", true); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(w, "```\n"); err != nil {
+			return fmt.Errorf("failed to close tree block: %w", err)
+		}
+		if _, err := io.WriteString(w, "\n"); err != nil {
+			return fmt.Errorf("failed to write tree separator: %w", err)
+		}
 	}
 
-	for _, relPath := range relPaths {
-		absPath := filesToInclude[relPath]
-		contentBytes, readErr := os.ReadFile(absPath)
-		if readErr != nil {
-			log.Printf("Warning: Could not read file '%s'. Content will be marked as failed. Error: %v", absPath, readErr)
-			contentBytes = []byte(fmt.Sprintf("FAILED_TO_READ_FILE: %v", readErr))
-		} else if len(contentBytes) == 0 {
-			log.Printf("Info: File '%s' is empty.", absPath)
+	if _, err := io.WriteString(w, "## Files\n\n"); err != nil {
+		return fmt.Errorf("failed to write files header: %w", err)
+	}
+
+	for _, entry := range snapshot.Files {
+		if _, err := io.WriteString(w, "### "+markdownInlineCode(entry.Path)+"\n"); err != nil {
+			return fmt.Errorf("failed to write file header: %w", err)
 		}
 
-		_, err = writer.WriteString("### `" + relPath + "`\n")
-		if err != nil {
-			return 0, fmt.Errorf("failed to write file header: %w", err)
+		fence := markdownFence(entry.Content)
+		if _, err := io.WriteString(w, fence+"\n"); err != nil {
+			return fmt.Errorf("failed to write code fence: %w", err)
 		}
 
-		fence := markdownFence(contentBytes)
-		_, err = writer.WriteString(fence + "\n")
-		if err != nil {
-			return 0, fmt.Errorf("failed to write code fence: %w", err)
-		}
-
-		if len(contentBytes) > 0 {
-			_, err = writer.Write(contentBytes)
-			if err != nil {
-				return 0, fmt.Errorf("failed to write file contents: %w", err)
+		if len(entry.Content) > 0 {
+			if _, err := w.Write(entry.Content); err != nil {
+				return fmt.Errorf("failed to write file contents: %w", err)
 			}
 		}
-		if len(contentBytes) == 0 || contentBytes[len(contentBytes)-1] != '\n' {
-			_, err = writer.WriteString("\n")
-			if err != nil {
-				return 0, fmt.Errorf("failed to write content newline: %w", err)
+		if len(entry.Content) == 0 || entry.Content[len(entry.Content)-1] != '\n' {
+			if _, err := io.WriteString(w, "\n"); err != nil {
+				return fmt.Errorf("failed to write content newline: %w", err)
 			}
 		}
 
-		_, err = writer.WriteString(fence + "\n\n")
-		if err != nil {
-			return 0, fmt.Errorf("failed to close code fence: %w", err)
+		if _, err := io.WriteString(w, fence+"\n\n"); err != nil {
+			return fmt.Errorf("failed to close code fence: %w", err)
 		}
-
-		processedFilesCount++
 	}
 
-	err = writer.Flush()
-	if err != nil {
-		return 0, fmt.Errorf("failed to flush Markdown writer: %w", err)
-	}
-
-	log.Printf("Successfully wrote %d files to %s", processedFilesCount, cfg.OutputFile)
-	return processedFilesCount, nil
+	return nil
 }
 
 func escapeMarkdownTable(value string) string {
@@ -128,6 +101,13 @@ func escapeMarkdownTable(value string) string {
 	escaped = strings.ReplaceAll(escaped, "\r", " ")
 	escaped = strings.ReplaceAll(escaped, "\n", " ")
 	return escaped
+}
+
+func markdownInlineCode(value string) string {
+	if !strings.Contains(value, "`") {
+		return "`" + value + "`"
+	}
+	return "``" + strings.ReplaceAll(value, "``", "` `") + "``"
 }
 
 func markdownFence(content []byte) string {
@@ -148,4 +128,37 @@ func markdownFence(content []byte) string {
 		fenceLen = maxRun + 1
 	}
 	return strings.Repeat("`", fenceLen)
+}
+
+func writeMarkdownTree(w io.Writer, nodes []*DirNode, prefix string, isRoot bool) error {
+	for i, node := range nodes {
+		if node == nil {
+			continue
+		}
+		isLast := i == len(nodes)-1
+		branch := "|-- "
+		nextPrefix := prefix + "|   "
+		if isLast {
+			branch = "`-- "
+			nextPrefix = prefix + "    "
+		}
+		if isRoot {
+			branch = ""
+			nextPrefix = ""
+		}
+
+		suffix := ""
+		if node.IsDir {
+			suffix = "/"
+		}
+		if _, err := io.WriteString(w, prefix+branch+node.Name+suffix+"\n"); err != nil {
+			return fmt.Errorf("failed to write tree node: %w", err)
+		}
+		if len(node.Children) > 0 {
+			if err := writeMarkdownTree(w, node.Children, nextPrefix, false); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

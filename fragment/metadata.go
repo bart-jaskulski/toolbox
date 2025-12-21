@@ -8,10 +8,10 @@ import (
 )
 
 // extractPackageData iterates through registered extractors and aggregates package information
-// into a unified list of XmlPackage structs.
-func extractPackageData(cfg *Config) []XmlPackage {
+// into a unified list of ProjectPackage structs.
+func extractPackageData(cfg *Config) []ProjectPackage {
 	log.Println("Attempting to extract package information using registered extractors...")
-	var allPkgs []XmlPackage
+	var allPkgs []ProjectPackage
 	foundAnyPackages := false
 
 	// Get all registered extractors
@@ -37,8 +37,8 @@ func extractPackageData(cfg *Config) []XmlPackage {
 		foundPackagesInThisFile := false
 		for _, group := range extractedData.Groups {
 			if len(group.Packages) > 0 {
-				xmlPkgs := mapInternalToXmlPackages(group.Packages, pkgType, group.ScopeName)
-				allPkgs = append(allPkgs, xmlPkgs...)
+				pkgs := mapInternalToProjectPackages(group.Packages, pkgType, group.ScopeName)
+				allPkgs = append(allPkgs, pkgs...)
 				foundPackagesInThisFile = true
 			}
 		}
@@ -61,15 +61,15 @@ func extractPackageData(cfg *Config) []XmlPackage {
 	return allPkgs
 }
 
-// mapInternalToXmlPackages converts []extractors.Package to []main.XmlPackage,
+// mapInternalToProjectPackages converts []extractors.Package to []main.ProjectPackage,
 // assigning the given package type and scope.
-func mapInternalToXmlPackages(internalPkgs []extractors.Package, pkgType string, pkgScope string) []XmlPackage {
+func mapInternalToProjectPackages(internalPkgs []extractors.Package, pkgType string, pkgScope string) []ProjectPackage {
 	if len(internalPkgs) == 0 {
 		return nil
 	}
-	xmlPkgs := make([]XmlPackage, len(internalPkgs))
+	projectPkgs := make([]ProjectPackage, len(internalPkgs))
 	for i, pkg := range internalPkgs {
-		xmlPkgs[i] = XmlPackage{
+		projectPkgs[i] = ProjectPackage{
 			Type:    pkgType,
 			Scope:   pkgScope,
 			Name:    pkg.Name,
@@ -77,5 +77,5 @@ func mapInternalToXmlPackages(internalPkgs []extractors.Package, pkgType string,
 		}
 	}
 	// Optional: Sort xmlPkgs by Name here if needed and not sorted earlier
-	return xmlPkgs
+	return projectPkgs
 }

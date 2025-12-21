@@ -1,6 +1,8 @@
 // internal/extractors/extractor.go
 package extractors
 
+import "sort"
+
 // ScopedPackageGroup holds a list of packages for a specific scope (e.g., "dependencies", "require-dev").
 type ScopedPackageGroup struct {
 	ScopeName string    // e.g., "require", "dependencies", "devDependencies"
@@ -28,8 +30,8 @@ type MetadataExtractor interface {
 // This is an internal representation used by extractors. The main package
 // might have its own struct for XML generation.
 type Package struct {
-    Name    string
-    Version string
+	Name    string
+	Version string
 }
 
 // availableExtractors holds all known metadata extractors.
@@ -38,22 +40,21 @@ var availableExtractors = make(map[string]MetadataExtractor)
 
 // Register adds an extractor to the registry. Typically called from init().
 func Register(name string, extractor MetadataExtractor) {
-    if _, exists := availableExtractors[name]; exists {
-        // Handle duplicate registration if necessary (e.g., log warning)
-        return
-    }
-    availableExtractors[name] = extractor
+	if _, exists := availableExtractors[name]; exists {
+		// Handle duplicate registration if necessary (e.g., log warning)
+		return
+	}
+	availableExtractors[name] = extractor
 }
 
 // GetAllExtractors returns a slice of all registered extractors.
 func GetAllExtractors() []MetadataExtractor {
-    list := make([]MetadataExtractor, 0, len(availableExtractors))
-    for _, extractor := range availableExtractors {
-        list = append(list, extractor)
-    }
-    // Optional: Sort extractors by filename for consistent checking order
-    // sort.Slice(list, func(i, j int) bool { return list[i].FileName() < list[j].FileName() })
-    return list
+	list := make([]MetadataExtractor, 0, len(availableExtractors))
+	for _, extractor := range availableExtractors {
+		list = append(list, extractor)
+	}
+	sort.Slice(list, func(i, j int) bool { return list[i].FileName() < list[j].FileName() })
+	return list
 }
 
 // mapToInternalPackages converts map[string]string to []Package.
@@ -62,8 +63,14 @@ func mapToInternalPackages(depMap map[string]string) []Package {
 	if len(depMap) == 0 {
 		return nil
 	}
+	names := make([]string, 0, len(depMap))
+	for name := range depMap {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 	packages := make([]Package, 0, len(depMap))
-	for name, version := range depMap {
+	for _, name := range names {
+		version := depMap[name]
 		packages = append(packages, Package{Name: name, Version: version})
 	}
 	return packages

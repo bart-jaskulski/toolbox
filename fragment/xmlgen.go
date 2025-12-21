@@ -2,88 +2,80 @@
 package main
 
 import (
-    "bufio"
-    "encoding/xml"
-    "fmt"
-    "log"
-    "os"
-    "path/filepath"
-    "sort" // Uncomment if sorting files
+	"encoding/xml"
+	"fmt"
+	"io"
 )
 
-// generateXML creates the final XML output file, including metadata.
-func generateXML(cfg *Config, filesToInclude map[string]string) (int, error) {
-    log.Println("Generating XML output...")
-    processedFilesCount := 0
+type xmlFormatter struct{}
 
-    projectName := filepath.Base(cfg.ProjectRoot)
+func (xmlFormatter) Name() string {
+	return outputFormatXML
+}
 
-    project := Project{
-        Name:     projectName,
-        Metadata: cfg.Metadata, // Assign non-package metadata from config (likely nil for now)
-        Files: Files{
-            Files: make([]File, 0, len(filesToInclude)),
-        },
-    }
+func (xmlFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
+	project := Project{
+		Name:     snapshot.Name,
+		Metadata: snapshot.Metadata,
+		Files: Files{
+			Files: make([]File, 0, len(snapshot.Files)),
+		},
+	}
 
-    // Populate unified packages section
-    if len(cfg.ExtractedPackages) > 0 {
-        project.Packages = &PackagesHolder{
-            PackageList: cfg.ExtractedPackages,
-        }
-    }
+	if len(snapshot.Packages) > 0 {
+		project.Packages = &PackagesHolder{
+			PackageList: snapshot.Packages,
+		}
+	}
 
-    // Sort files by relative path for consistent output
-    relPaths := make([]string, 0, len(filesToInclude))
-    for relPath := range filesToInclude {
-        relPaths = append(relPaths, relPath)
-    }
-    sort.Strings(relPaths)
+	if snapshot.Tree != nil {
+		project.Tree = &Tree{
+			Nodes: toXMLTreeNodes(snapshot.Tree.Children),
+		}
+	}
 
-    for _, relPath := range relPaths {
-        absPath := filesToInclude[relPath]
-        contentBytes, err := os.ReadFile(absPath)
-        if err != nil {
-            log.Printf("Warning: Could not read file '%s'. Content will be marked as failed. Error: %v", absPath, err)
-            contentBytes = []byte(fmt.Sprintf(" FAILED_TO_READ_FILE: %v ", err))
-        } else if len(contentBytes) == 0 {
-            log.Printf("Info: File '%s' is empty.", absPath)
-        }
+	for _, entry := range snapshot.Files {
+		project.Files.Files = append(project.Files.Files, File{
+			Path:    entry.Path,
+			Content: entry.Content,
+		})
+	}
 
-        project.Files.Files = append(project.Files.Files, File{
-            Path:    relPath,
-            Content: contentBytes,
-        })
-        processedFilesCount++
-    }
+	if _, err := io.WriteString(w, xml.Header); err != nil {
+		return fmt.Errorf("failed to write XML header: %w", err)
+	}
 
-    outFile, err := os.Create(cfg.OutputFile)
-    if err != nil {
-        return 0, fmt.Errorf("failed to create output file '%s': %w", cfg.OutputFile, err)
-    }
-    defer outFile.Close()
+	encoder := xml.NewEncoder(w)
+	encoder.Indent("", "  ")
+	if err := encoder.Encode(project); err != nil {
+		return fmt.Errorf("failed to encode XML: %w", err)
+	}
 
-    writer := bufio.NewWriter(outFile)
+	if _, err := io.WriteString(w, "\n"); err != nil {
+		return fmt.Errorf("failed to write XML trailer: %w", err)
+	}
+	return nil
+}
 
-    _, err = writer.WriteString(xml.Header)
-    if err != nil {
-        return 0, fmt.Errorf("failed to write XML header: %w", err)
-    }
-
-    encoder := xml.NewEncoder(writer)
-    encoder.Indent("", "  ")
-    err = encoder.Encode(project) // Encode the project struct including metadata
-    if err != nil {
-        return 0, fmt.Errorf("failed to encode XML: %w", err)
-    }
-
-    _, _ = writer.WriteString("\n")
-
-    err = writer.Flush()
-    if err != nil {
-        return 0, fmt.Errorf("failed to flush XML writer: %w", err)
-    }
-
-    log.Printf("Successfully wrote %d files to %s", processedFilesCount, cfg.OutputFile)
-    return processedFilesCount, nil
+func toXMLTreeNodes(nodes []*DirNode) []TreeNode {
+	if len(nodes) == 0 {
+		return nil
+	}
+	out := make([]TreeNode, 0, len(nodes))
+	for _, node := range nodes {
+		if node == nil {
+			continue
+		}
+		kind := "file"
+		if node.IsDir {
+			kind = "dir"
+		}
+		out = append(out, TreeNode{
+			Name:     node.Name,
+			Path:     node.Path,
+			Kind:     kind,
+			Children: toXMLTreeNodes(node.Children),
+		})
+	}
+	return out
 }

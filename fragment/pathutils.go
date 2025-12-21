@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // findRealpathCmd checks for realpath or grealpath and returns the command name.
@@ -140,4 +141,18 @@ func resolveAndValidatePaths(outputFile string, inputDirs []string, realpathCmd 
 		return "", nil, errors.New("no valid input directories remaining after validation")
 	}
 	return absoluteOutputFile, absoluteInputDirs, nil
+}
+
+// inputsUnderRoot checks whether all inputs are inside the project root.
+func inputsUnderRoot(projectRoot string, inputDirs []string) bool {
+	rootWithSep := projectRoot + string(filepath.Separator)
+	for _, dir := range inputDirs {
+		if dir == projectRoot {
+			continue
+		}
+		if !strings.HasPrefix(dir, rootWithSep) {
+			return false
+		}
+	}
+	return true
 }
