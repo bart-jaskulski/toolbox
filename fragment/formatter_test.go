@@ -84,6 +84,50 @@ func TestJSONFormatter(t *testing.T) {
 	}
 }
 
+func TestJSONFormatterNoTree(t *testing.T) {
+	snapshot := &ProjectSnapshot{
+		Name: "demo",
+		Files: []FileEntry{
+			{Path: "a.txt", Content: []byte("hello")},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := (jsonFormatter{}).Write(&buf, snapshot); err != nil {
+		t.Fatalf("json formatter: %v", err)
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	if _, ok := out["tree"]; ok {
+		t.Fatalf("expected tree to be omitted when not present")
+	}
+}
+
+func TestXMLFormatterNoTree(t *testing.T) {
+	snapshot := &ProjectSnapshot{
+		Name: "demo",
+		Files: []FileEntry{
+			{Path: "a.txt", Content: []byte("hello")},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := (xmlFormatter{}).Write(&buf, snapshot); err != nil {
+		t.Fatalf("xml formatter: %v", err)
+	}
+
+	var project Project
+	if err := xml.Unmarshal(buf.Bytes(), &project); err != nil {
+		t.Fatalf("xml unmarshal: %v", err)
+	}
+	if project.Tree != nil {
+		t.Fatalf("expected tree to be omitted when not present")
+	}
+}
+
 func TestMarkdownFormatterTree(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
