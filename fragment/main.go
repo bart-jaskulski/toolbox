@@ -137,6 +137,7 @@ func runConcatenation(ctx context.Context, cmd *cli.Command) error {
 	outputSet := cmd.IsSet("output")
 
 	outputFormat := outputFormatXML
+	var err error
 	if formatSet {
 		normalized, err := normalizeOutputFormat(rawFormat)
 		if err != nil {
