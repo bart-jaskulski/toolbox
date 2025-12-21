@@ -1,0 +1,120 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"encoding/xml"
+	"strings"
+	"testing"
+)
+
+func TestXMLFormatter(t *testing.T) {
+	snapshot := &ProjectSnapshot{
+		Name: "demo",
+		Files: []FileEntry{
+			{Path: "a.txt", Content: []byte("hello")},
+		},
+		Packages: []ProjectPackage{
+			{Type: "npm", Scope: "dependencies", Name: "react", Version: "18.2.0"},
+		},
+		Tree: &DirNode{
+			Name:  ".",
+			IsDir: true,
+			Children: []*DirNode{
+				{Name: "a.txt", Path: "a.txt", IsDir: false},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := (xmlFormatter{}).Write(&buf, snapshot); err != nil {
+		t.Fatalf("xml formatter: %v", err)
+	}
+
+	var project Project
+	if err := xml.Unmarshal(buf.Bytes(), &project); err != nil {
+		t.Fatalf("xml unmarshal: %v", err)
+	}
+	if project.Name != "demo" {
+		t.Fatalf("expected project name demo, got %q", project.Name)
+	}
+	if project.Packages == nil || len(project.Packages.PackageList) != 1 {
+		t.Fatalf("expected 1 package")
+	}
+	if project.Tree == nil || len(project.Tree.Nodes) != 1 {
+		t.Fatalf("expected 1 tree node")
+	}
+}
+
+func TestJSONFormatter(t *testing.T) {
+	snapshot := &ProjectSnapshot{
+		Name: "demo",
+		Files: []FileEntry{
+			{Path: "a.txt", Content: []byte("hello")},
+		},
+		Packages: []ProjectPackage{
+			{Type: "npm", Scope: "dependencies", Name: "react", Version: "18.2.0"},
+		},
+		Tree: &DirNode{
+			Name:  ".",
+			IsDir: true,
+			Children: []*DirNode{
+				{Name: "a.txt", Path: "a.txt", IsDir: false},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := (jsonFormatter{}).Write(&buf, snapshot); err != nil {
+		t.Fatalf("json formatter: %v", err)
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal(buf.Bytes(), &out); err != nil {
+		t.Fatalf("json unmarshal: %v", err)
+	}
+	if out["name"] != "demo" {
+		t.Fatalf("expected name demo, got %v", out["name"])
+	}
+	if files, ok := out["files"].([]any); !ok || len(files) != 1 {
+		t.Fatalf("expected 1 file in json output")
+	}
+	if tree, ok := out["tree"].([]any); !ok || len(tree) != 1 {
+		t.Fatalf("expected tree in json output")
+	}
+}
+
+func TestMarkdownFormatterTree(t *testing.T) {
+	snapshot := &ProjectSnapshot{
+		Name: "demo",
+		Files: []FileEntry{
+			{Path: "a.txt", Content: []byte("hello")},
+		},
+		Tree: &DirNode{
+			Name:  ".",
+			IsDir: true,
+			Children: []*DirNode{
+				{Name: "a.txt", Path: "a.txt", IsDir: false},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := (markdownFormatter{}).Write(&buf, snapshot); err != nil {
+		t.Fatalf("markdown formatter: %v", err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "## Tree") {
+		t.Fatalf("expected tree header")
+	}
+	if !strings.Contains(out, "```") {
+		t.Fatalf("expected tree fenced block")
+	}
+	if !strings.Contains(out, "a.txt") {
+		t.Fatalf("expected tree output to include file")
+	}
+	if !strings.Contains(out, "### `a.txt`") {
+		t.Fatalf("expected file heading")
+	}
+}
