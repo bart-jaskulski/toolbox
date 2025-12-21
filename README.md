@@ -8,6 +8,7 @@ Monorepo for mini Go CLI tools
 - `commitment`: AI-assisted commit message generator — `go install github.com/bart-jaskulski/toolbox/commitment@latest`
 - `ddc`: DevDocs offline browser — `go install github.com/bart-jaskulski/toolbox/ddc@latest`
 - `em`: terminal emoji picker — `go install github.com/bart-jaskulski/toolbox/em@latest`
+- `fragment`: project file concatenator to XML or Markdown — `go install github.com/bart-jaskulski/toolbox/fragment@latest`
 - `mfeed`: RSS/Atom meta-feed generator — `go install github.com/bart-jaskulski/toolbox/mfeed@latest`
 - `rdr`: readability-based web page to Markdown reader — `go install github.com/bart-jaskulski/toolbox/rdr@latest`
 
@@ -18,7 +19,7 @@ Compile any tool locally without installing (avoids clashing with the module dir
 ```bash
 mkdir -p bin
 go work sync
-go build -o bin/bm ./bm          # change bm -> commitment|ddc|em|mfeed|rdr
+go build -o bin/bm ./bm          # change bm -> commitment|ddc|em|fragment|mfeed|rdr
 ```
 
 ## Local development
