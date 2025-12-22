@@ -104,10 +104,36 @@ func escapeMarkdownTable(value string) string {
 }
 
 func markdownInlineCode(value string) string {
-	if !strings.Contains(value, "`") {
-		return "`" + value + "`"
+	maxRun := 0
+	run := 0
+	for _, r := range value {
+		if r == '`' {
+			run++
+			if run > maxRun {
+				maxRun = run
+			}
+		} else {
+			run = 0
+		}
 	}
-	return "``" + strings.ReplaceAll(value, "``", "` `") + "``"
+	fenceLen := 1
+	if maxRun+1 > fenceLen {
+		fenceLen = maxRun + 1
+	}
+	fence := strings.Repeat("`", fenceLen)
+
+	padLeft := strings.HasPrefix(value, "`") || strings.HasPrefix(value, " ")
+	padRight := strings.HasSuffix(value, "`") || strings.HasSuffix(value, " ")
+	leftPad := ""
+	rightPad := ""
+	if padLeft {
+		leftPad = " "
+	}
+	if padRight {
+		rightPad = " "
+	}
+
+	return fence + leftPad + value + rightPad + fence
 }
 
 func markdownFence(content []byte) string {
