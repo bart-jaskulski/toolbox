@@ -16,6 +16,8 @@ type ProjectSnapshot struct {
 	Packages []ProjectPackage
 	Tree     *DirNode
 	Metadata *ProjectMetadata
+	API      *ApiIndex
+	ApiOnly  bool
 }
 
 // DirNode represents a directory or file node.

@@ -36,6 +36,7 @@ type Config struct {
 	CombinedExcludes  []string         // User + Default patterns
 	NoIgnore          bool             // Do not respect .gitignore (Git mode only)
 	NoTree            bool             // Do not generate directory tree overview
+	ApiOnly           bool             // Generate API index instead of file contents
 }
 
 // List of common lock files to exclude by default.
@@ -89,6 +90,11 @@ func main() {
 				Usage: "Do not generate directory tree overview",
 			},
 			&cli.BoolFlag{
+				Name:  "api",
+				Value: false,
+				Usage: "Generate API index instead of concatenating file contents",
+			},
+			&cli.BoolFlag{
 				Name:  "include-binary",
 				Value: false,
 				Usage: "Include all files (don't skip likely binary files)",
@@ -112,6 +118,7 @@ Binary files are detected heuristically and skipped unless --include-binary is u
 Use --no-ignore to bypass .gitignore when scanning a Git repository.
 If --format is omitted, the format is inferred from the output file extension when possible.
 Use --no-tree to skip generating the directory tree overview.
+Use --api to emit an API index instead of concatenating file contents.
 
 Use -v or --verbose to see detailed processing steps.
 
@@ -157,6 +164,7 @@ func runConcatenation(ctx context.Context, cmd *cli.Command) error {
 		ExcludePatterns: cmd.StringSlice("exclude"), // User patterns
 		NoIgnore:        cmd.Bool("no-ignore"),
 		NoTree:          cmd.Bool("no-tree"),
+		ApiOnly:         cmd.Bool("api"),
 		IncludeBinary:   cmd.Bool("include-binary"),
 		Verbose:         cmd.Bool("verbose"),
 		InputDirs:       cmd.Args().Slice(),
@@ -248,7 +256,13 @@ func runConcatenation(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// --- Build Snapshot ---
-	snapshot, fileCount, err := buildSnapshot(&cfg, filesToInclude)
+	var snapshot *ProjectSnapshot
+	var fileCount int
+	if cfg.ApiOnly {
+		snapshot, fileCount, err = buildApiSnapshot(&cfg, filesToInclude)
+	} else {
+		snapshot, fileCount, err = buildSnapshot(&cfg, filesToInclude)
+	}
 	if err != nil {
 		return fmt.Errorf("building snapshot: %w", err)
 	}

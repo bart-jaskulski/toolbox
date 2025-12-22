@@ -15,19 +15,22 @@ func (jsonFormatter) Name() string {
 func (jsonFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 	out := jsonProject{
 		Name:     snapshot.Name,
-		Files:    make([]jsonFile, 0, len(snapshot.Files)),
 		Packages: snapshot.Packages,
 		Metadata: snapshot.Metadata,
+		API:      snapshot.API,
 	}
 	if snapshot.Tree != nil {
 		out.Tree = snapshot.Tree.Children
 	}
 
-	for _, entry := range snapshot.Files {
-		out.Files = append(out.Files, jsonFile{
-			Path:    entry.Path,
-			Content: string(entry.Content),
-		})
+	if !snapshot.ApiOnly {
+		out.Files = make([]jsonFile, 0, len(snapshot.Files))
+		for _, entry := range snapshot.Files {
+			out.Files = append(out.Files, jsonFile{
+				Path:    entry.Path,
+				Content: string(entry.Content),
+			})
+		}
 	}
 
 	encoder := json.NewEncoder(w)
@@ -40,10 +43,11 @@ func (jsonFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 
 type jsonProject struct {
 	Name     string           `json:"name"`
-	Files    []jsonFile       `json:"files"`
+	Files    []jsonFile       `json:"files,omitempty"`
 	Packages []ProjectPackage `json:"packages,omitempty"`
 	Tree     []*DirNode       `json:"tree,omitempty"`
 	Metadata *ProjectMetadata `json:"metadata,omitempty"`
+	API      *ApiIndex        `json:"api,omitempty"`
 }
 
 type jsonFile struct {

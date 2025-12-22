@@ -29,6 +29,10 @@ func printProcessingInfo(cfg *Config) {
 // (No changes needed here)
 func printCompletionInfo(cfg *Config, fileCount int) {
 	fmt.Println("-------------------------------------------------")
-	fmt.Printf("Wrote %d files to %s (%s)\n", fileCount, cfg.OutputFile, formatDisplayName(cfg.OutputFormat))
+	if cfg.ApiOnly {
+		fmt.Printf("Wrote API index for %d files to %s (%s)\n", fileCount, cfg.OutputFile, formatDisplayName(cfg.OutputFormat))
+	} else {
+		fmt.Printf("Wrote %d files to %s (%s)\n", fileCount, cfg.OutputFile, formatDisplayName(cfg.OutputFormat))
+	}
 	fmt.Println("-------------------------------------------------")
 }

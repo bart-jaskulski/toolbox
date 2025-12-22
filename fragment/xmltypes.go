@@ -8,9 +8,10 @@ type Project struct {
 	XMLName  xml.Name         `xml:"project"`
 	Name     string           `xml:"name,attr"`
 	Metadata *ProjectMetadata `xml:"metadata,omitempty"` // For non-package metadata
-	Files    Files            `xml:"files"`
+	Files    *Files           `xml:"files,omitempty"`
 	Packages *PackagesHolder  `xml:"packages,omitempty"` // Unified packages list
 	Tree     *Tree            `xml:"tree,omitempty"`
+	API      *ApiIndex        `xml:"api,omitempty"`
 }
 
 // PackagesHolder wraps the list of packages to ensure the <packages> element.

@@ -17,9 +17,6 @@ func (xmlFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 	project := Project{
 		Name:     snapshot.Name,
 		Metadata: snapshot.Metadata,
-		Files: Files{
-			Files: make([]File, 0, len(snapshot.Files)),
-		},
 	}
 
 	if len(snapshot.Packages) > 0 {
@@ -34,11 +31,20 @@ func (xmlFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 		}
 	}
 
-	for _, entry := range snapshot.Files {
-		project.Files.Files = append(project.Files.Files, File{
-			Path:    entry.Path,
-			Content: entry.Content,
-		})
+	if snapshot.API != nil {
+		project.API = snapshot.API
+	}
+
+	if !snapshot.ApiOnly && len(snapshot.Files) > 0 {
+		project.Files = &Files{
+			Files: make([]File, 0, len(snapshot.Files)),
+		}
+		for _, entry := range snapshot.Files {
+			project.Files.Files = append(project.Files.Files, File{
+				Path:    entry.Path,
+				Content: entry.Content,
+			})
+		}
 	}
 
 	if _, err := io.WriteString(w, xml.Header); err != nil {

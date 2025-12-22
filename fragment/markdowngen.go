@@ -63,6 +63,29 @@ func (markdownFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 		}
 	}
 
+	if snapshot.API != nil && len(snapshot.API.Files) > 0 {
+		if _, err := io.WriteString(w, "## API\n"); err != nil {
+			return fmt.Errorf("failed to write api header: %w", err)
+		}
+		for _, file := range snapshot.API.Files {
+			if _, err := io.WriteString(w, "### "+markdownInlineCode(file.Path)+" ("+file.Language+")\n"); err != nil {
+				return fmt.Errorf("failed to write api file header: %w", err)
+			}
+			for _, symbol := range file.Symbols {
+				if err := writeMarkdownSymbol(w, symbol, 0); err != nil {
+					return err
+				}
+			}
+			if _, err := io.WriteString(w, "\n"); err != nil {
+				return fmt.Errorf("failed to write api separator: %w", err)
+			}
+		}
+	}
+
+	if snapshot.ApiOnly {
+		return nil
+	}
+
 	if _, err := io.WriteString(w, "## Files\n\n"); err != nil {
 		return fmt.Errorf("failed to write files header: %w", err)
 	}
@@ -154,6 +177,31 @@ func markdownFence(content []byte) string {
 		fenceLen = maxRun + 1
 	}
 	return strings.Repeat("`", fenceLen)
+}
+
+func writeMarkdownSymbol(w io.Writer, symbol ApiSymbol, depth int) error {
+	indent := strings.Repeat("  ", depth)
+	line := fmt.Sprintf("%s- %s %s", indent, symbol.Kind, symbol.Name)
+	if symbol.Signature != "" {
+		line = line + " — " + markdownInlineCode(symbol.Signature)
+	}
+	if _, err := io.WriteString(w, line+"\n"); err != nil {
+		return fmt.Errorf("failed to write api symbol: %w", err)
+	}
+	if symbol.Doc != "" {
+		doc := strings.TrimSpace(symbol.Doc)
+		if doc != "" {
+			if _, err := io.WriteString(w, indent+"  doc: "+doc+"\n"); err != nil {
+				return fmt.Errorf("failed to write api doc: %w", err)
+			}
+		}
+	}
+	for _, child := range symbol.Children {
+		if err := writeMarkdownSymbol(w, child, depth+1); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func writeMarkdownTree(w io.Writer, nodes []*DirNode, prefix string, isRoot bool) error {
