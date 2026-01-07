@@ -65,4 +65,7 @@ func TestBuildSnapshotNoTree(t *testing.T) {
 	if snapshot.Files[0].Path != "a.txt" || snapshot.Files[1].Path != "b.txt" {
 		t.Fatalf("expected files sorted by path, got %q then %q", snapshot.Files[0].Path, snapshot.Files[1].Path)
 	}
+	if snapshot.Files[0].Language != "text" || snapshot.Files[1].Language != "text" {
+		t.Fatalf("expected language to be detected as text")
+	}
 }

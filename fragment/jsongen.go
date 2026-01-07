@@ -27,8 +27,9 @@ func (jsonFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 		out.Files = make([]jsonFile, 0, len(snapshot.Files))
 		for _, entry := range snapshot.Files {
 			out.Files = append(out.Files, jsonFile{
-				Path:    entry.Path,
-				Content: string(entry.Content),
+				Path:     entry.Path,
+				Language: entry.Language,
+				Content:  string(entry.Content),
 			})
 		}
 	}
@@ -51,6 +52,7 @@ type jsonProject struct {
 }
 
 type jsonFile struct {
-	Path    string `json:"path"`
-	Content string `json:"content"`
+	Path     string `json:"path"`
+	Language string `json:"language,omitempty"`
+	Content  string `json:"content"`
 }

@@ -11,6 +11,7 @@ type ProjectPackage struct {
 
 // FileEntry holds a file's content and relative path.
 type FileEntry struct {
-	Path    string
-	Content []byte
+	Path     string
+	Content  []byte
+	Language string
 }

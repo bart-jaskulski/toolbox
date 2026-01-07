@@ -12,7 +12,7 @@ func TestXMLFormatter(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
 		Files: []FileEntry{
-			{Path: "a.txt", Content: []byte("hello")},
+			{Path: "a.txt", Content: []byte("hello"), Language: "text"},
 		},
 		Packages: []ProjectPackage{
 			{Type: "npm", Scope: "dependencies", Name: "react", Version: "18.2.0"},
@@ -41,6 +41,12 @@ func TestXMLFormatter(t *testing.T) {
 	if project.Packages == nil || len(project.Packages.PackageList) != 1 {
 		t.Fatalf("expected 1 package")
 	}
+	if project.Files == nil || len(project.Files.Files) != 1 {
+		t.Fatalf("expected 1 file")
+	}
+	if project.Files.Files[0].Language != "text" {
+		t.Fatalf("expected file language text, got %q", project.Files.Files[0].Language)
+	}
 	if project.Tree == nil || len(project.Tree.Nodes) != 1 {
 		t.Fatalf("expected 1 tree node")
 	}
@@ -50,7 +56,7 @@ func TestJSONFormatter(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
 		Files: []FileEntry{
-			{Path: "a.txt", Content: []byte("hello")},
+			{Path: "a.txt", Content: []byte("hello"), Language: "text"},
 		},
 		Packages: []ProjectPackage{
 			{Type: "npm", Scope: "dependencies", Name: "react", Version: "18.2.0"},
@@ -79,6 +85,15 @@ func TestJSONFormatter(t *testing.T) {
 	if files, ok := out["files"].([]any); !ok || len(files) != 1 {
 		t.Fatalf("expected 1 file in json output")
 	}
+	if files, ok := out["files"].([]any); ok && len(files) == 1 {
+		fileObj, ok := files[0].(map[string]any)
+		if !ok {
+			t.Fatalf("expected file to be object")
+		}
+		if fileObj["language"] != "text" {
+			t.Fatalf("expected file language text, got %v", fileObj["language"])
+		}
+	}
 	if tree, ok := out["tree"].([]any); !ok || len(tree) != 1 {
 		t.Fatalf("expected tree in json output")
 	}
@@ -88,7 +103,7 @@ func TestJSONFormatterNoTree(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
 		Files: []FileEntry{
-			{Path: "a.txt", Content: []byte("hello")},
+			{Path: "a.txt", Content: []byte("hello"), Language: "text"},
 		},
 	}
 
@@ -110,7 +125,7 @@ func TestXMLFormatterNoTree(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
 		Files: []FileEntry{
-			{Path: "a.txt", Content: []byte("hello")},
+			{Path: "a.txt", Content: []byte("hello"), Language: "text"},
 		},
 	}
 
@@ -132,7 +147,7 @@ func TestMarkdownFormatterTree(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
 		Files: []FileEntry{
-			{Path: "a.txt", Content: []byte("hello")},
+			{Path: "a.txt", Content: []byte("hello"), Language: "text"},
 		},
 		Tree: &DirNode{
 			Name:  ".",

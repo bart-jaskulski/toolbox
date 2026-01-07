@@ -35,9 +35,10 @@ type Files struct {
 
 // File represents a single file entry in the XML. (Remains the same)
 type File struct {
-	XMLName xml.Name `xml:"file"`
-	Path    string   `xml:"path,attr"`
-	Content []byte   `xml:",cdata"`
+	XMLName  xml.Name `xml:"file"`
+	Path     string   `xml:"path,attr"`
+	Language string   `xml:"language,attr,omitempty"`
+	Content  []byte   `xml:",cdata"`
 }
 
 // Tree represents a directory tree overview.

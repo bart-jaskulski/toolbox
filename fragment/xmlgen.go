@@ -41,8 +41,9 @@ func (xmlFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 		}
 		for _, entry := range snapshot.Files {
 			project.Files.Files = append(project.Files.Files, File{
-				Path:    entry.Path,
-				Content: entry.Content,
+				Path:     entry.Path,
+				Language: entry.Language,
+				Content:  entry.Content,
 			})
 		}
 	}

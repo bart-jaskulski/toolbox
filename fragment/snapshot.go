@@ -49,8 +49,9 @@ func buildSnapshot(cfg *Config, filesToInclude map[string]string) (*ProjectSnaps
 		}
 
 		files = append(files, FileEntry{
-			Path:    relPath,
-			Content: contentBytes,
+			Path:     relPath,
+			Content:  contentBytes,
+			Language: languageForPath(relPath),
 		})
 	}
 

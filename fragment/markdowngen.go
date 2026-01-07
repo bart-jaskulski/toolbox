@@ -96,7 +96,11 @@ func (markdownFormatter) Write(w io.Writer, snapshot *ProjectSnapshot) error {
 		}
 
 		fence := markdownFence(entry.Content)
-		if _, err := io.WriteString(w, fence+"\n"); err != nil {
+		openFence := fence
+		if entry.Language != "" {
+			openFence = fence + entry.Language
+		}
+		if _, err := io.WriteString(w, openFence+"\n"); err != nil {
 			return fmt.Errorf("failed to write code fence: %w", err)
 		}
 

@@ -42,7 +42,7 @@ func TestMarkdownFormatterNoTree(t *testing.T) {
 	snapshot := &ProjectSnapshot{
 		Name: "demo",
 		Files: []FileEntry{
-			{Path: "a.txt", Content: []byte("hello")},
+			{Path: "a.txt", Content: []byte("hello"), Language: "text"},
 		},
 	}
 
@@ -57,5 +57,8 @@ func TestMarkdownFormatterNoTree(t *testing.T) {
 	}
 	if !strings.Contains(out, "### `a.txt`") {
 		t.Fatalf("expected file heading")
+	}
+	if !strings.Contains(out, "```text") {
+		t.Fatalf("expected language-aware code fence")
 	}
 }
